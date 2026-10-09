@@ -51,6 +51,7 @@ function person(r) {
   return {
     name: app.fullName(r),
     badgeName: app.badgeName(r),
+    profileName: app.schedProfileName(r),
     email: app.field(r, "Email"),
     affiliation: r.Organization || app.field(r, "Organization"),
     registrationType: app.registrationDetails(r).registrationType,
@@ -70,7 +71,7 @@ async function plannedAction(email) {
 }
 
 async function invite(p) {
-  return sched.inviteToSched({ email: p.email, name: p.badgeName || p.name, company: p.affiliation });
+  return sched.inviteToSched({ email: p.email, name: p.profileName || p.badgeName || p.name, company: p.affiliation });
 }
 
 (async () => {
@@ -117,7 +118,7 @@ async function invite(p) {
     const rows = [];
     for (const [i, p] of toInvite.entries()) {
       const plan = await plannedAction(p.email);
-      rows.push({ ...p, sentToSchedAs: p.badgeName || p.name, plannedAction: plan.action, existingUsername: plan.username });
+      rows.push({ ...p, sentToSchedAs: p.profileName, plannedAction: plan.action, existingUsername: plan.username });
       process.stdout.write(`\r  ${i + 1}/${toInvite.length}`);
       await sleep(PACE_MS);
     }
