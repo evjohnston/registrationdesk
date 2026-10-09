@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0; min-height: 100vh;
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: #f4f5f7; color: #1f2933; padding: 40px 16px;
     }
@@ -15,6 +15,7 @@
       width: 100%; max-width: 480px; margin: 0 auto; background: #fff; border-radius: 16px;
       padding: 28px 24px; box-shadow: 0 4px 24px rgba(0,0,0,.08);
     }
+    .logo { display: block; width: 100%; max-width: 280px; height: auto; margin: 0 auto 20px; }
     h1 { font-size: 1.5rem; margin: 0 0 4px; text-align: center; }
     h2 { font-size: 1.25rem; margin: 0 0 16px; }
     .meta { color: #616e7c; margin: 0 0 24px; font-size: .95rem; text-align: center; }
@@ -47,16 +48,18 @@
     .done .big { font-size: 4rem; color: #2f8132; line-height: 1; }
     .done p { font-size: 1.15rem; }
     .badge-box { background: #fff8e6; border: 2px dashed #f0b429; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 1.1rem; }
-    .schedule { margin: 4px 0 8px; }
-    .schedule-title { font-size: 1rem !important; font-weight: 600; margin: 0 0 8px; }
-    .schedule img { display: block; margin: 0 auto 8px; }
-    .schedule a { color: #3366ff; font-weight: 600; font-size: 1.05rem; }
+    .qr-row { display: flex; justify-content: center; gap: 16px; margin: 4px 0 8px; }
+    .qr { flex: 1 1 0; max-width: 180px; display: flex; flex-direction: column; align-items: center; }
+    .qr-title { font-size: .95rem !important; font-weight: 600; margin: 0 0 8px; min-height: 2.4em; display: flex; align-items: flex-end; justify-content: center; }
+    .qr img { display: block; width: 100%; max-width: 150px; height: auto; margin-bottom: 6px; }
+    .qr-url { color: #52606d; font-weight: 600; font-size: .9rem; }
     .error { background: #ffe3e3; color: #8a041a; padding: 12px; border-radius: 10px; margin-top: 14px; }
     [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <main class="card">
+    <img class="logo" src="/aoir-logo.png" alt="AoIR CDMX 2026" width="800" height="453" />
     <h1 id="title">Event Check-In</h1>
     <p class="meta" id="meta">&nbsp;</p>
 
@@ -90,10 +93,17 @@
       <div class="big">✓</div>
       <p id="doneMsg"></p>
       <div class="badge-box">Please head to the <strong>volunteer table</strong> to pick up your badge.</div>
-      <div class="schedule">
-        <p class="schedule-title">Conference schedule &amp; more</p>
-        <img src="/schedule-qr.svg" alt="QR code linking to aoir26.sched.com" width="180" height="180" />
-        <a href="https://aoir26.sched.com" target="_blank" rel="noopener">aoir26.sched.com</a>
+      <div class="qr-row">
+        <div class="qr">
+          <p class="qr-title">Conference schedule &amp; more</p>
+          <img src="/schedule-qr.svg" alt="QR code for aoir26.sched.com" width="150" height="150" />
+          <span class="qr-url">aoir26.sched.com</span>
+        </div>
+        <div class="qr">
+          <p class="qr-title">Shop AoIR!</p>
+          <img src="/shop-qr.svg" alt="QR code for shop.aoir.org" width="150" height="150" />
+          <span class="qr-url">shop.aoir.org</span>
+        </div>
       </div>
       <button id="nextBtn" class="secondary">Done</button>
     </section>
@@ -136,7 +146,10 @@
       if (ev.name) {
         $("title").textContent = ev.name;
         document.title = "Check in: " + ev.name;
-        const when = ev.startDate ? new Date(ev.startDate).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
+        // Show the event's own local time (the date string's wall-clock time), not the viewer's time zone.
+        const when = ev.startDate
+          ? new Date(ev.startDate.slice(0, 19) + "Z").toLocaleString([], { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
+          : "";
         $("meta").textContent = [when, ev.location].filter(Boolean).join(" · ");
       }
       if (ev.requiresCode && !code) return show("stepCode");

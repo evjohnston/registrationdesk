@@ -9,6 +9,11 @@ loadEnv(path.join(__dirname, ".env"));
 
 const app = require("./lib/app");
 const PORT = Number(process.env.PORT || 3000);
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+};
 
 if (!app.configured) {
   console.error("Missing WA_API_KEY or WA_EVENT_ID. Open the .env file and fill them in.");
@@ -42,9 +47,13 @@ if (process.argv.includes("--test")) {
   http
     .createServer((req, res) => {
       if (req.url.startsWith("/api/")) return app.handleApi(req, res);
-      if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        return fs.createReadStream(path.join(__dirname, "public", "index.html")).pipe(res);
+      // Serve files from public/, like Vercel does.
+      const publicDir = path.join(__dirname, "public");
+      const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+      const file = path.join(publicDir, urlPath === "/" ? "index.html" : urlPath);
+      if (req.method === "GET" && file.startsWith(publicDir + path.sep) && fs.existsSync(file) && fs.statSync(file).isFile()) {
+        res.writeHead(200, { "Content-Type": MIME_TYPES[path.extname(file)] || "application/octet-stream" });
+        return fs.createReadStream(file).pipe(res);
       }
       res.writeHead(404).end("Not found");
     })
