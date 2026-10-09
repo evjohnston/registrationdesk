@@ -10,7 +10,7 @@ The WildApricot API key stays on the server and is never sent to the browser.
 ```bash
 cp .env.example .env   # then fill in WA_API_KEY and WA_EVENT_ID
 npm run test-connection  # lists registrants, checks no one in
-npm start                # http://localhost:3000
+npm run dev              # http://localhost:3000
 ```
 
 ## Deploy (Vercel)
@@ -25,4 +25,4 @@ npm start                # http://localhost:3000
 - `public/index.html`: the check-in page
 - `lib/app.js`: WildApricot calls and the `/api/*` handler
 - `api/index.js`: Vercel entry point
-- `server.js`: local dev server
+- `local-server.js`: local dev server (named so Vercel does not treat it as the app)

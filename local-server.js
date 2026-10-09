@@ -23,7 +23,7 @@ function loadEnv(file) {
   }
 }
 
-// `node server.js --test` verifies credentials and lists registrations without checking anyone in.
+// `node local-server.js --test` verifies credentials and lists registrations without checking anyone in.
 if (process.argv.includes("--test")) {
   (async () => {
     const ev = await app.getEvent();

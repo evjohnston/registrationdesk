@@ -3,8 +3,8 @@
   "private": true,
   "description": "Self check-in page for a WildApricot event",
   "scripts": {
-    "start": "node server.js",
-    "test-connection": "node server.js --test"
+    "dev": "node local-server.js",
+    "test-connection": "node local-server.js --test"
   },
   "engines": { "node": ">=20" }
 }
