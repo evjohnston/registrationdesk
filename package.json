@@ -1,0 +1,10 @@
+{
+  "name": "registrationdesk",
+  "private": true,
+  "description": "Self check-in page for a WildApricot event",
+  "scripts": {
+    "start": "node server.js",
+    "test-connection": "node server.js --test"
+  },
+  "engines": { "node": ">=20" }
+}
