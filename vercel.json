@@ -1,3 +1,6 @@
 {
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "public",
   "rewrites": [{ "source": "/api/:route*", "destination": "/api/index?__route=:route*" }]
 }
