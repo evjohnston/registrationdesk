@@ -60,7 +60,7 @@
 <body>
   <main class="card">
     <img class="logo" src="/aoir-logo.png" alt="AoIR CDMX 2026" width="800" height="453" />
-    <h1 id="title">Event Check-In</h1>
+    <h1 id="title">&nbsp;</h1>
     <p class="meta" id="meta">&nbsp;</p>
 
     <!-- Step 0: door code (only shown if CHECKIN_CODE is set) -->
@@ -142,22 +142,35 @@
     }
 
     // ---- Event info + door code ----
+    function renderEvent(ev) {
+      if (!ev || !ev.name) return;
+      $("title").textContent = ev.name;
+      document.title = "Check in: " + ev.name;
+      // Show the event's own local time (the date string's wall-clock time), not the viewer's time zone.
+      const when = ev.startDate
+        ? new Date(ev.startDate.slice(0, 19) + "Z").toLocaleString([], { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
+        : "";
+      $("meta").textContent = [when, ev.location].filter(Boolean).join(" · ");
+    }
+
+    // Show the page right away, using event details saved from the last visit if there are any,
+    // then refresh them in the background.
+    const savedEvent = JSON.parse(localStorage.getItem("event") || "null");
+    renderEvent(savedEvent);
+    show(savedEvent?.requiresCode && !code ? "stepCode" : "stepSearch");
+    fetch("/api/warm", { method: "POST" }).catch(() => {}); // load the attendee list before the first search
+
     fetch("/api/event").then((r) => r.json()).then(async (ev) => {
-      if (ev.name) {
-        $("title").textContent = ev.name;
-        document.title = "Check in: " + ev.name;
-        // Show the event's own local time (the date string's wall-clock time), not the viewer's time zone.
-        const when = ev.startDate
-          ? new Date(ev.startDate.slice(0, 19) + "Z").toLocaleString([], { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })
-          : "";
-        $("meta").textContent = [when, ev.location].filter(Boolean).join(" · ");
+      if (!ev.name) throw new Error();
+      renderEvent(ev);
+      localStorage.setItem("event", JSON.stringify(ev));
+      let needsCode = ev.requiresCode && !code;
+      if (ev.requiresCode && code) {
+        try { await api("/api/verify-code"); } catch { code = ""; needsCode = true; }
       }
-      if (ev.requiresCode && !code) return show("stepCode");
-      if (ev.requiresCode) {
-        try { await api("/api/verify-code"); } catch { code = ""; return show("stepCode"); }
-      }
-      show("stepSearch");
-    }).catch(() => showError("Couldn't load the event. Please see a volunteer."));
+      if (needsCode && !$("stepSearch").hidden) show("stepCode");
+      if (!needsCode && !$("stepCode").hidden) show("stepSearch");
+    }).catch(() => { if (!savedEvent) showError("Couldn't load the event. Please see a volunteer."); });
 
     $("codeBtn").onclick = async () => {
       code = $("code").value.trim();
