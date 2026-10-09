@@ -45,8 +45,9 @@
     dd { margin: 0; font-weight: 500; word-break: break-word; }
     .confirm-note { margin-top: 18px; color: #52606d; font-size: .95rem; }
     .done { text-align: center; }
-    .done .big { font-size: 4rem; color: #2f8132; line-height: 1; }
-    .done p { font-size: 1.15rem; }
+    .done-msg { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 4px; }
+    .done-msg .check { font-size: 2rem; color: #2f8132; line-height: 1; }
+    .done-msg p { font-size: 1.15rem; margin: 0; }
     .badge-box { background: #fff8e6; border: 2px dashed #f0b429; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 1.1rem; }
     .qr-row { display: flex; justify-content: center; gap: 16px; margin: 4px 0 8px; }
     .qr { flex: 1 1 0; max-width: 180px; display: flex; flex-direction: column; align-items: center; }
@@ -90,8 +91,10 @@
 
     <!-- Step 3: done -->
     <section id="stepDone" class="done" hidden>
-      <div class="big">✓</div>
-      <p id="doneMsg"></p>
+      <div class="done-msg">
+        <span class="check" aria-hidden="true">✓</span>
+        <p id="doneMsg"></p>
+      </div>
       <div class="badge-box">Please head to the <strong>volunteer table</strong> to pick up your badge.</div>
       <div class="qr-row">
         <div class="qr">
