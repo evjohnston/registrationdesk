@@ -5,7 +5,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-loadEnv(path.join(__dirname, ".env"));
+require("./lib/env")(path.join(__dirname, ".env"));
 
 const app = require("./lib/app");
 const PORT = Number(process.env.PORT || 3000);
@@ -18,14 +18,6 @@ const MIME_TYPES = {
 if (!app.configured) {
   console.error("Missing WA_API_KEY or WA_EVENT_ID. Open the .env file and fill them in.");
   process.exit(1);
-}
-
-function loadEnv(file) {
-  if (!fs.existsSync(file)) return;
-  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-  }
 }
 
 // `node local-server.js --test` verifies credentials and lists registrations without checking anyone in.

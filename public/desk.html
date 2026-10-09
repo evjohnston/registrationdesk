@@ -76,6 +76,19 @@
     .success p { margin: 0; font-size: 1.05rem; }
     .reminder { background: #fff8e6; border: 2px dashed #f0b429; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 1.05rem; }
     .error { background: #ffe3e3; color: #8a041a; padding: 12px; border-radius: 10px; margin-bottom: 14px; }
+    .sched { margin-top: 22px; border-top: 1px solid #e4e7eb; padding-top: 16px; }
+    .sched h3 { font-size: 1rem; margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+    .sched .acct { font-weight: 600; margin-bottom: 10px; }
+    .sched .acct.ok { color: #0e5814; }
+    .sched .acct.no { color: #8d5b00; }
+    .sched .note { color: #616e7c; font-size: .9rem; margin: 6px 0 10px; }
+    .sched .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .sched h4 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #7b8794; margin: 0 0 6px; }
+    .sched ul { list-style: none; margin: 0; padding: 0; }
+    .sched li { padding: 6px 0; border-bottom: 1px solid #f0f4f8; font-size: .92rem; }
+    .sched li .t { color: #616e7c; font-size: .85rem; }
+    .sched .invite { background: #3366ff; color: #fff; padding: 8px 14px; font-size: .95rem; }
+    .sched .result { margin-top: 8px; font-size: .95rem; }
     kbd { background: #f0f4f8; border: 1px solid #cbd2d9; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: .85em; }
   </style>
 </head>
@@ -132,6 +145,10 @@
             <button id="nextBtn">Next attendee <kbd>Esc</kbd></button>
             <span class="spacer" style="flex:1"></span>
             <button id="undoBtn" class="danger" hidden>Undo check-in</button>
+          </div>
+          <div class="sched" id="sched" hidden>
+            <h3>Sched</h3>
+            <div id="schedBody">Loading Sched…</div>
           </div>
         </div>
       </section>
@@ -271,9 +288,11 @@
       $("dWarn").hidden = true;
       $("checkinBtn").hidden = true;
       $("undoBtn").hidden = true;
+      $("sched").hidden = true;
       try {
         const { data } = await api("/api/desk/registration/" + id);
         renderDetail(data);
+        loadSched(id);
       } catch (err) { showDetailError(err.message); }
     }
 
@@ -300,6 +319,72 @@
       // Keep the search list in sync with what we now know.
       const r = results.find((x) => x.id === d.id);
       if (r && r.checkedIn !== d.checkedIn) { r.checkedIn = d.checkedIn; renderResults(); }
+    }
+
+    // ---- Sched ----
+    function fmtSession(s) {
+      const d = new Date(String(s.start).replace(" ", "T") + "Z"); // Sched times are local event times
+      const when = d.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "UTC" });
+      return [when, s.venue].filter(Boolean).join(" · ");
+    }
+
+    function sessionList(title, list, max) {
+      const wrap = document.createElement("div");
+      const h = document.createElement("h4"); h.textContent = title; wrap.append(h);
+      const ul = document.createElement("ul");
+      if (!list.length) { const li = document.createElement("li"); li.className = "t"; li.textContent = "None"; ul.append(li); }
+      list.slice(0, max).forEach((s) => {
+        const li = document.createElement("li");
+        const n = document.createElement("div"); n.textContent = s.name;
+        const t = document.createElement("div"); t.className = "t"; t.textContent = fmtSession(s);
+        li.append(n, t); ul.append(li);
+      });
+      if (list.length > max) { const li = document.createElement("li"); li.className = "t"; li.textContent = `+ ${list.length - max} more`; ul.append(li); }
+      wrap.append(ul);
+      return wrap;
+    }
+
+    async function loadSched(id) {
+      $("sched").hidden = false;
+      const body = $("schedBody");
+      body.textContent = "Loading Sched…";
+      try {
+        const { data } = await api("/api/desk/sched/" + id);
+        if (!current || current.id !== id) return; // volunteer moved on
+        if (!data.enabled) { $("sched").hidden = true; return; }
+        body.innerHTML = "";
+        const acct = document.createElement("div");
+        if (data.account) {
+          acct.className = "acct ok";
+          acct.textContent = `✓ Has a Sched account (${data.account.username}${data.account.roles ? " · " + data.account.roles : ""})`;
+          body.append(acct);
+          if (data.account.matchedBy === "name") {
+            const n = document.createElement("div"); n.className = "note";
+            n.textContent = "Matched by name: their Sched account uses a different email than their registration.";
+            body.append(n);
+          }
+        } else {
+          acct.className = "acct no";
+          acct.textContent = "No Sched account found for this email.";
+          const btn = document.createElement("button");
+          btn.className = "invite"; btn.textContent = "Send Sched invite";
+          const result = document.createElement("div"); result.className = "result";
+          btn.onclick = async () => {
+            btn.disabled = true; btn.textContent = "Sending…";
+            try {
+              const r = await api("/api/desk/sched/invite", { method: "POST", body: JSON.stringify({ id }) });
+              result.textContent = "✓ " + r.data.message;
+              btn.remove();
+            } catch (err) { result.textContent = err.message; btn.disabled = false; btn.textContent = "Send Sched invite"; }
+          };
+          body.append(acct, btn, result);
+        }
+        const cols = document.createElement("div"); cols.className = "cols";
+        cols.append(sessionList("Speaking in", data.speaking, 4), sessionList("Added to their schedule", data.picked, 4));
+        body.append(cols);
+      } catch (err) {
+        body.textContent = "Couldn't load Sched: " + err.message;
+      }
     }
 
     function showDetailError(msg) {

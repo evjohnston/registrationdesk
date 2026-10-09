@@ -20,9 +20,28 @@ npm run dev              # http://localhost:3000
 3. Settings → Domains → add `register.emersonjohnston.org`, then add the CNAME record
    Vercel shows you at GoDaddy (usually `register` → `cname.vercel-dns.com`).
 
+## Pages
+
+- `/` is the attendee self check-in page (for the iPad), with schedule and shop QR codes.
+- `/desk` is the volunteer registration desk (needs `DESK_PASSWORD`). It shows full badge details,
+  checks people in or undoes it, and, if `SCHED_API_KEY` is set, shows each person's Sched account,
+  sessions, and a "Send Sched invite" button.
+
+Every check-in is read back from WildApricot and only reported as saved if it was.
+
+## Sched bulk invite
+
+```bash
+node scripts/sched-sync.js           # preview: who has no Sched account
+node scripts/sched-sync.js --apply   # create those accounts; Sched emails each person
+```
+
 ## Layout
 
 - `public/index.html`: the check-in page
 - `lib/app.js`: WildApricot calls and the `/api/*` handler
+- `lib/sched.js`: Sched API (account status, invites, schedules)
+- `public/desk.html`: volunteer desk page
+- `scripts/sched-sync.js`: bulk Sched invites
 - `api/index.js`: Vercel entry point
 - `local-server.js`: local dev server (named so Vercel does not treat it as the app)
