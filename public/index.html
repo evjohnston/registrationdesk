@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Event Check-In</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: start center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7; color: #1f2933; padding: 40px 16px;
+    }
+    .card {
+      width: 100%; max-width: 480px; background: #fff; border-radius: 16px;
+      padding: 28px 24px; box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 4px; text-align: center; }
+    h2 { font-size: 1.25rem; margin: 0 0 16px; }
+    .meta { color: #616e7c; margin: 0 0 24px; font-size: .95rem; text-align: center; }
+    label { display: block; font-weight: 600; margin: 0 0 8px; }
+    input {
+      width: 100%; padding: 14px; font-size: 1.1rem; border: 1px solid #cbd2d9; border-radius: 10px;
+    }
+    input:focus { outline: 2px solid #3366ff; border-color: transparent; }
+    button {
+      width: 100%; margin-top: 16px; padding: 14px; font-size: 1.1rem; font-weight: 600;
+      color: #fff; background: #3366ff; border: 0; border-radius: 10px; cursor: pointer;
+    }
+    button.secondary { background: #e4e7eb; color: #1f2933; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .hint { color: #7b8794; font-size: .9rem; margin-top: 10px; }
+    .results { list-style: none; padding: 0; margin: 16px 0 0; }
+    .results li button {
+      margin: 0 0 8px; text-align: left; background: #f5f7fa; color: #1f2933;
+      border: 1px solid #e4e7eb; font-weight: 500; display: flex; justify-content: space-between; gap: 8px;
+    }
+    .results li button:hover { border-color: #3366ff; }
+    .results .org { color: #7b8794; font-size: .9rem; display: block; font-weight: 400; }
+    .pill { font-size: .8rem; background: #e3f9e5; color: #0e5814; padding: 3px 8px; border-radius: 99px; align-self: center; white-space: nowrap; }
+    .registered { background: #e3f9e5; color: #0e5814; padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; font-weight: 600; }
+    dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; }
+    dt { color: #7b8794; }
+    dd { margin: 0; font-weight: 500; word-break: break-word; }
+    .confirm-note { margin-top: 18px; color: #52606d; font-size: .95rem; }
+    .done { text-align: center; }
+    .done .big { font-size: 4rem; color: #2f8132; line-height: 1; }
+    .done p { font-size: 1.15rem; }
+    .badge-box { background: #fff8e6; border: 2px dashed #f0b429; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 1.1rem; }
+    .error { background: #ffe3e3; color: #8a041a; padding: 12px; border-radius: 10px; margin-top: 14px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1 id="title">Event Check-In</h1>
+    <p class="meta" id="meta">&nbsp;</p>
+
+    <!-- Step 0: door code (only shown if CHECKIN_CODE is set) -->
+    <section id="stepCode" hidden>
+      <label for="code">Check-in code</label>
+      <input id="code" type="text" autocomplete="off" placeholder="Posted at the entrance" />
+      <button id="codeBtn">Continue</button>
+    </section>
+
+    <!-- Step 1: search -->
+    <section id="stepSearch" hidden>
+      <label for="q">Search for your name</label>
+      <input id="q" type="search" autocomplete="off" placeholder="Start typing your first or last name" />
+      <ul class="results" id="results"></ul>
+      <p class="hint" id="searchHint">Type at least 2 letters.</p>
+    </section>
+
+    <!-- Step 2: confirm details -->
+    <section id="stepConfirm" hidden>
+      <div class="registered">✓ You're registered for this event</div>
+      <h2 id="cName"></h2>
+      <dl id="cFields"></dl>
+      <p class="confirm-note">Is this information correct? If anything is wrong, check in anyway and let a volunteer know.</p>
+      <button id="checkinBtn">Yes, check me in</button>
+      <button id="backBtn" class="secondary">That's not me</button>
+    </section>
+
+    <!-- Step 3: done -->
+    <section id="stepDone" class="done" hidden>
+      <div class="big">✓</div>
+      <p id="doneMsg"></p>
+      <div class="badge-box">Please head to the <strong>volunteer table</strong> to pick up your badge.</div>
+      <button id="nextBtn" class="secondary">Done</button>
+    </section>
+
+    <div id="error" class="error" hidden></div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const steps = ["stepCode", "stepSearch", "stepConfirm", "stepDone"];
+    let code = sessionStorage.getItem("checkinCode") || "";
+    let current = null;
+    let resetTimer = null;
+
+    function show(step) {
+      steps.forEach((s) => ($(s).hidden = s !== step));
+      $("error").hidden = true;
+      if (step === "stepSearch") setTimeout(() => $("q").focus(), 0);
+    }
+    function showError(msg) { $("error").textContent = msg; $("error").hidden = false; }
+
+    async function api(path, opts = {}) {
+      const r = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", "X-Checkin-Code": code, ...(opts.headers || {}) } });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(data.error || "Something went wrong."), { status: r.status });
+      return data;
+    }
+
+    function reset() {
+      clearTimeout(resetTimer);
+      current = null;
+      $("q").value = "";
+      $("results").innerHTML = "";
+      $("searchHint").textContent = "Type at least 2 letters.";
+      show("stepSearch");
+    }
+
+    // ---- Event info + door code ----
+    fetch("/api/event").then((r) => r.json()).then(async (ev) => {
+      if (ev.name) {
+        $("title").textContent = ev.name;
+        document.title = "Check in: " + ev.name;
+        const when = ev.startDate ? new Date(ev.startDate).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
+        $("meta").textContent = [when, ev.location].filter(Boolean).join(" · ");
+      }
+      if (ev.requiresCode && !code) return show("stepCode");
+      if (ev.requiresCode) {
+        try { await api("/api/verify-code"); } catch { code = ""; return show("stepCode"); }
+      }
+      show("stepSearch");
+    }).catch(() => showError("Couldn't load the event. Please see a volunteer."));
+
+    $("codeBtn").onclick = async () => {
+      code = $("code").value.trim();
+      try {
+        await api("/api/verify-code");
+        sessionStorage.setItem("checkinCode", code);
+        show("stepSearch");
+      } catch (e) { showError(e.message); }
+    };
+    $("code").addEventListener("keydown", (e) => e.key === "Enter" && $("codeBtn").click());
+
+    // ---- Search ----
+    let searchTimer = null;
+    $("q").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(search, 250);
+    });
+
+    async function search() {
+      const q = $("q").value.trim();
+      $("error").hidden = true;
+      if (q.length < 2) { $("results").innerHTML = ""; $("searchHint").textContent = "Type at least 2 letters."; return; }
+      $("searchHint").textContent = "Searching…";
+      try {
+        const results = await api("/api/search?q=" + encodeURIComponent(q));
+        if (q !== $("q").value.trim()) return; // user kept typing
+        $("results").innerHTML = "";
+        results.forEach((r) => {
+          const li = document.createElement("li");
+          const b = document.createElement("button");
+          const left = document.createElement("span");
+          left.textContent = r.name;
+          if (r.organization) {
+            const org = document.createElement("span");
+            org.className = "org";
+            org.textContent = r.organization;
+            left.append(org);
+          }
+          b.append(left);
+          if (r.checkedIn) {
+            const pill = document.createElement("span");
+            pill.className = "pill";
+            pill.textContent = "Checked in";
+            b.append(pill);
+          }
+          b.onclick = () => openRegistration(r.id);
+          li.append(b);
+          $("results").append(li);
+        });
+        $("searchHint").textContent = results.length
+          ? "Tap your name to continue."
+          : "No registrations found with that name. Try your last name, or see a volunteer.";
+      } catch (e) { $("searchHint").textContent = ""; showError(e.message); }
+    }
+
+    // ---- Confirm ----
+    async function openRegistration(id) {
+      try {
+        current = await api("/api/registration/" + id);
+        $("cName").textContent = current.name;
+        const dl = $("cFields");
+        dl.innerHTML = "";
+        const rows = [
+          ["Registration", current.registrationType],
+          ...current.fields.map((f) => [f.label, f.value]),
+        ].filter(([, v]) => v);
+        rows.forEach(([k, v]) => {
+          const dt = document.createElement("dt"); dt.textContent = k;
+          const dd = document.createElement("dd"); dd.textContent = v;
+          dl.append(dt, dd);
+        });
+        $("checkinBtn").textContent = current.checkedIn ? "Already checked in. Continue" : "Yes, check me in";
+        show("stepConfirm");
+      } catch (e) { showError(e.message); }
+    }
+
+    $("backBtn").onclick = reset;
+
+    $("checkinBtn").onclick = async () => {
+      const btn = $("checkinBtn");
+      btn.disabled = true;
+      btn.textContent = "Checking in…";
+      try {
+        const data = await api("/api/checkin", { method: "POST", body: JSON.stringify({ id: current.id }) });
+        const first = (data.name || "").split(" ")[0];
+        $("doneMsg").textContent = data.status === "already"
+          ? `You're already checked in${first ? ", " + first : ""}!`
+          : `You're checked in${first ? ", " + first : ""}. Welcome!`;
+        show("stepDone");
+        resetTimer = setTimeout(reset, 15000); // auto-return for the next person
+      } catch (e) {
+        showError(e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    $("nextBtn").onclick = reset;
+  </script>
+</body>
+</html>
