@@ -50,7 +50,8 @@ if (process.argv.includes("--test")) {
       // Serve files from public/, like Vercel does.
       const publicDir = path.join(__dirname, "public");
       const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
-      const file = path.join(publicDir, urlPath === "/" ? "index.html" : urlPath);
+      let file = path.join(publicDir, urlPath === "/" ? "index.html" : urlPath);
+      if (!path.extname(file)) file += ".html"; // clean URLs, e.g. /desk -> desk.html (same as Vercel)
       if (req.method === "GET" && file.startsWith(publicDir + path.sep) && fs.existsSync(file) && fs.statSync(file).isFile()) {
         res.writeHead(200, { "Content-Type": MIME_TYPES[path.extname(file)] || "application/octet-stream" });
         return fs.createReadStream(file).pipe(res);

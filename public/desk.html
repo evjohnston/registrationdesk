@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Registration Desk</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: #f4f5f7; color: #1f2933;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    [hidden] { display: none !important; }
+    button {
+      font: inherit; font-weight: 600; border: 0; border-radius: 10px; cursor: pointer;
+      padding: 12px 18px; background: #e4e7eb; color: #1f2933;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .primary { background: #2f8132; color: #fff; font-size: 1.2rem; padding: 16px 24px; }
+    .danger { background: #fff; color: #a61b1b; border: 1px solid #f0b4b4; }
+    input {
+      width: 100%; padding: 12px 14px; font-size: 1.1rem; border: 1px solid #cbd2d9; border-radius: 10px;
+    }
+    input:focus { outline: 2px solid #3366ff; border-color: transparent; }
+
+    /* Sign-in */
+    .login { max-width: 380px; margin: 12vh auto; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+    .login img { display: block; width: 220px; margin: 0 auto 16px; }
+    .login h1 { text-align: center; font-size: 1.3rem; margin: 0 0 20px; }
+    .login label { display: block; font-weight: 600; margin: 14px 0 6px; }
+    .login button { width: 100%; margin-top: 20px; background: #3366ff; color: #fff; }
+
+    /* Desk layout */
+    header {
+      display: flex; align-items: center; gap: 16px; padding: 10px 24px; background: #fff;
+      border-bottom: 1px solid #e4e7eb;
+    }
+    header img { height: 40px; }
+    header .event { font-weight: 700; font-size: 1.1rem; }
+    header .spacer { flex: 1; }
+    .stats { background: #e3f9e5; color: #0e5814; padding: 6px 12px; border-radius: 99px; font-weight: 600; }
+    .who { color: #616e7c; font-size: .9rem; }
+    .who button { padding: 4px 10px; font-size: .85rem; margin-left: 6px; }
+
+    main.desk { display: grid; grid-template-columns: minmax(300px, 2fr) 3fr; gap: 20px; padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+    .panel { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
+    .search-panel { align-self: start; position: sticky; top: 20px; }
+    .search-panel label { display: block; font-weight: 600; margin-bottom: 8px; }
+    .hint { color: #7b8794; font-size: .9rem; margin: 10px 2px 0; }
+    .results { list-style: none; margin: 12px 0 0; padding: 0; max-height: calc(100vh - 230px); overflow-y: auto; }
+    .results li {
+      padding: 10px 12px; border-radius: 10px; cursor: pointer; display: flex; gap: 10px;
+      justify-content: space-between; align-items: center; border: 1px solid transparent;
+    }
+    .results li:hover { background: #f5f7fa; }
+    .results li.active { background: #ebf0ff; border-color: #3366ff; }
+    .results .n { font-weight: 600; }
+    .results .sub { color: #7b8794; font-size: .88rem; }
+    .pill { font-size: .8rem; padding: 3px 9px; border-radius: 99px; white-space: nowrap; font-weight: 600; }
+    .pill.in { background: #e3f9e5; color: #0e5814; }
+
+    .empty { color: #7b8794; text-align: center; padding: 60px 20px; }
+    .detail h2 { font-size: 1.7rem; margin: 0 0 6px; }
+    .status { display: inline-block; font-weight: 700; padding: 6px 12px; border-radius: 8px; margin-bottom: 16px; }
+    .status.in { background: #e3f9e5; color: #0e5814; }
+    .status.out { background: #f0f4f8; color: #52606d; }
+    .warn { background: #fff8e6; border: 1px solid #f0b429; color: #8d5b00; padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-weight: 600; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 10px 20px; margin: 0 0 22px; font-size: 1.05rem; }
+    dt { color: #7b8794; }
+    dd { margin: 0; font-weight: 600; word-break: break-word; }
+    .actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+    .success { background: #e3f9e5; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .success .big { font-size: 1.35rem; font-weight: 700; color: #0e5814; margin: 0 0 6px; }
+    .success p { margin: 0; font-size: 1.05rem; }
+    .reminder { background: #fff8e6; border: 2px dashed #f0b429; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-size: 1.05rem; }
+    .error { background: #ffe3e3; color: #8a041a; padding: 12px; border-radius: 10px; margin-bottom: 14px; }
+    kbd { background: #f0f4f8; border: 1px solid #cbd2d9; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: .85em; }
+  </style>
+</head>
+<body>
+  <!-- Sign-in -->
+  <section id="login" class="login" hidden>
+    <img src="/aoir-logo.png" alt="AoIR CDMX 2026" />
+    <h1>Registration Desk</h1>
+    <form id="loginForm">
+      <label for="volunteerName">Your name</label>
+      <input id="volunteerName" autocomplete="name" required placeholder="So we know who checked people in" />
+      <label for="password">Desk password</label>
+      <input id="password" type="password" required />
+      <div id="loginError" class="error" style="margin: 14px 0 0" hidden></div>
+      <button type="submit">Start</button>
+    </form>
+  </section>
+
+  <!-- Desk -->
+  <div id="desk" hidden>
+    <header>
+      <img src="/aoir-logo.png" alt="AoIR" />
+      <span class="event" id="eventName">Registration Desk</span>
+      <span class="spacer"></span>
+      <span class="stats" id="stats">…</span>
+      <span class="who">Volunteer: <strong id="whoName"></strong><button id="signOut">Sign out</button></span>
+    </header>
+
+    <main class="desk">
+      <section class="panel search-panel">
+        <label for="q">Attendee name</label>
+        <input id="q" type="search" autocomplete="off" placeholder="First or last name" />
+        <ul class="results" id="results"></ul>
+        <p class="hint" id="hint">Type at least 2 letters. Use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> to pick, <kbd>Esc</kbd> to clear.</p>
+      </section>
+
+      <section class="panel detail" id="detail">
+        <div class="empty" id="emptyState">Ask the attendee for their name, search for it, and select them to see their registration.</div>
+        <div id="detailBody" hidden>
+          <div id="detailError" class="error" hidden></div>
+          <div id="successBox" hidden>
+            <div class="success">
+              <p class="big" id="successTitle"></p>
+              <p>Hand them their badge.</p>
+            </div>
+            <div class="reminder">📱 Remind them to visit the <strong>iPad</strong> to get the <strong>Sched</strong> conference schedule and to check out the <strong>AoIR shop</strong>.</div>
+          </div>
+          <h2 id="dName"></h2>
+          <div id="dStatus" class="status"></div>
+          <div id="dWarn" class="warn" hidden></div>
+          <dl id="dFields"></dl>
+          <div class="actions">
+            <button id="checkinBtn" class="primary">Check in</button>
+            <button id="nextBtn">Next attendee <kbd>Esc</kbd></button>
+            <span class="spacer" style="flex:1"></span>
+            <button id="undoBtn" class="danger" hidden>Undo check-in</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let password = localStorage.getItem("deskPassword") || "";
+    let volunteer = localStorage.getItem("deskVolunteer") || "";
+    let results = [];
+    let active = -1;
+    let current = null; // registration shown on the right
+    let statsTimer = null;
+
+    async function api(path, opts = {}) {
+      const r = await fetch(path, {
+        ...opts,
+        headers: { "Content-Type": "application/json", "X-Desk-Password": password, "X-Volunteer": volunteer },
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 401) { signOut("Your session expired or the password changed. Please sign in again."); throw new Error(data.error); }
+      if (!r.ok && r.status !== 409) throw new Error(data.error || "Something went wrong.");
+      return { status: r.status, data };
+    }
+
+    // ---- Sign in / out ----
+    function showLogin(message) {
+      $("desk").hidden = true;
+      $("login").hidden = false;
+      $("volunteerName").value = volunteer;
+      $("loginError").hidden = !message;
+      $("loginError").textContent = message || "";
+      (volunteer ? $("password") : $("volunteerName")).focus();
+    }
+
+    function signOut(message) {
+      password = "";
+      localStorage.removeItem("deskPassword");
+      clearInterval(statsTimer);
+      showLogin(message);
+    }
+
+    $("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      volunteer = $("volunteerName").value.trim();
+      password = $("password").value;
+      try {
+        await api("/api/desk/verify");
+        localStorage.setItem("deskPassword", password);
+        localStorage.setItem("deskVolunteer", volunteer);
+        $("password").value = "";
+        startDesk();
+      } catch (err) {
+        $("loginError").textContent = err.message || "Couldn't sign in.";
+        $("loginError").hidden = false;
+      }
+    });
+
+    $("signOut").onclick = () => signOut();
+
+    function startDesk() {
+      $("login").hidden = true;
+      $("desk").hidden = false;
+      $("whoName").textContent = volunteer;
+      $("q").focus();
+      refreshStats();
+      clearInterval(statsTimer);
+      statsTimer = setInterval(refreshStats, 20000);
+    }
+
+    async function refreshStats() {
+      try {
+        const { data } = await api("/api/desk/stats");
+        $("stats").textContent = `${data.checkedIn} / ${data.total} checked in`;
+      } catch {}
+    }
+
+    fetch("/api/event").then((r) => r.json()).then((ev) => { if (ev.name) $("eventName").textContent = ev.name + " · Registration Desk"; }).catch(() => {});
+
+    // ---- Search ----
+    let searchTimer = null;
+    $("q").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(search, 200); });
+
+    async function search() {
+      const q = $("q").value.trim();
+      if (q.length < 2) { results = []; renderResults(); $("hint").hidden = false; return; }
+      try {
+        const { data } = await api("/api/desk/search?q=" + encodeURIComponent(q));
+        if (q !== $("q").value.trim()) return; // they kept typing
+        results = data;
+        active = results.length ? 0 : -1;
+        renderResults();
+        $("hint").hidden = results.length > 0;
+        if (!results.length) { $("hint").hidden = false; $("hint").textContent = "No registrations match. Try the last name, or a different spelling."; }
+      } catch (err) { $("hint").hidden = false; $("hint").textContent = err.message; }
+    }
+
+    function renderResults() {
+      const ul = $("results");
+      ul.innerHTML = "";
+      results.forEach((r, i) => {
+        const li = document.createElement("li");
+        if (i === active) li.className = "active";
+        const left = document.createElement("div");
+        const n = document.createElement("div"); n.className = "n"; n.textContent = r.name;
+        const sub = document.createElement("div"); sub.className = "sub";
+        sub.textContent = [r.badgeName && r.badgeName !== r.name ? `Badge: ${r.badgeName}` : "", r.organization].filter(Boolean).join(" · ");
+        left.append(n, sub);
+        li.append(left);
+        if (r.checkedIn) { const p = document.createElement("span"); p.className = "pill in"; p.textContent = "Checked in"; li.append(p); }
+        li.onclick = () => { active = i; renderResults(); openRegistration(r.id); };
+        ul.append(li);
+      });
+      ul.querySelector(".active")?.scrollIntoView({ block: "nearest" });
+    }
+
+    $("q").addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" && results.length) { e.preventDefault(); active = Math.min(active + 1, results.length - 1); renderResults(); }
+      else if (e.key === "ArrowUp" && results.length) { e.preventDefault(); active = Math.max(active - 1, 0); renderResults(); }
+      else if (e.key === "Enter" && active >= 0) { e.preventDefault(); openRegistration(results[active].id); }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("desk").hidden) nextAttendee();
+    });
+
+    // ---- Detail ----
+    async function openRegistration(id) {
+      $("emptyState").hidden = true;
+      $("detailBody").hidden = false;
+      $("successBox").hidden = true;
+      $("detailError").hidden = true;
+      $("dName").textContent = "Loading…";
+      $("dFields").innerHTML = "";
+      $("dStatus").textContent = "";
+      $("dWarn").hidden = true;
+      $("checkinBtn").hidden = true;
+      $("undoBtn").hidden = true;
+      try {
+        const { data } = await api("/api/desk/registration/" + id);
+        renderDetail(data);
+      } catch (err) { showDetailError(err.message); }
+    }
+
+    function renderDetail(d) {
+      current = d;
+      $("dName").textContent = d.name;
+      $("dStatus").className = "status " + (d.checkedIn ? "in" : "out");
+      $("dStatus").textContent = d.checkedIn ? "✓ Checked in" : "Not checked in yet";
+      const unpaid = d.paymentStatus && !["Paid", "Free"].includes(d.paymentStatus);
+      $("dWarn").hidden = !unpaid;
+      $("dWarn").textContent = unpaid ? `⚠ Payment status in WildApricot: ${d.paymentStatus}. Check with the registration lead before handing over a badge.` : "";
+      const dl = $("dFields");
+      dl.innerHTML = "";
+      [["Registration", d.registrationType], ...d.fields.map((f) => [f.label, f.value])].filter(([, v]) => v).forEach(([k, v]) => {
+        const dt = document.createElement("dt"); dt.textContent = k;
+        const dd = document.createElement("dd"); dd.textContent = v;
+        dl.append(dt, dd);
+      });
+      $("checkinBtn").hidden = d.checkedIn;
+      $("checkinBtn").disabled = false;
+      $("checkinBtn").textContent = "Check in";
+      $("undoBtn").hidden = !d.checkedIn;
+      $("undoBtn").disabled = false;
+      // Keep the search list in sync with what we now know.
+      const r = results.find((x) => x.id === d.id);
+      if (r && r.checkedIn !== d.checkedIn) { r.checkedIn = d.checkedIn; renderResults(); }
+    }
+
+    function showDetailError(msg) {
+      $("detailError").textContent = msg;
+      $("detailError").hidden = false;
+    }
+
+    $("checkinBtn").onclick = async () => {
+      if (!current) return;
+      const btn = $("checkinBtn");
+      btn.disabled = true;
+      btn.textContent = "Checking in…";
+      $("detailError").hidden = true;
+      try {
+        const { status, data } = await api("/api/desk/checkin", { method: "POST", body: JSON.stringify({ id: current.id }) });
+        renderDetail(data);
+        if (status === 409) {
+          showDetailError(`${data.name} was already checked in (by another volunteer or at the iPad). Confirm they don't already have a badge.`);
+        } else {
+          $("successTitle").textContent = `✓ ${data.name} is checked in`;
+          $("successBox").hidden = false;
+        }
+        refreshStats();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = "Check in";
+        showDetailError("Check-in was NOT saved: " + err.message + " Try again.");
+      }
+    };
+
+    $("undoBtn").onclick = async () => {
+      if (!current || !confirm(`Undo check-in for ${current.name}?`)) return;
+      $("undoBtn").disabled = true;
+      $("detailError").hidden = true;
+      try {
+        const { data } = await api("/api/desk/undo", { method: "POST", body: JSON.stringify({ id: current.id }) });
+        $("successBox").hidden = true;
+        renderDetail(data);
+        refreshStats();
+      } catch (err) {
+        $("undoBtn").disabled = false;
+        showDetailError("Undo was NOT saved: " + err.message);
+      }
+    };
+
+    $("nextBtn").onclick = nextAttendee;
+
+    function nextAttendee() {
+      current = null;
+      results = [];
+      active = -1;
+      renderResults();
+      $("q").value = "";
+      $("hint").hidden = false;
+      $("hint").innerHTML = "Type at least 2 letters. Use <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> to pick, <kbd>Esc</kbd> to clear.";
+      $("detailBody").hidden = true;
+      $("emptyState").hidden = false;
+      $("q").focus();
+    }
+
+    // ---- Start ----
+    if (password && volunteer) {
+      api("/api/desk/verify").then(startDesk).catch((err) => { if ($("login").hidden) showLogin(err.message); });
+    } else {
+      showLogin();
+    }
+  </script>
+</body>
+</html>
